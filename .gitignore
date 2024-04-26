@@ -6,6 +6,7 @@ Data/
 
 # tested result so not important
 reports/
+audio_reports/
 
 # Ignore .env file that contains environment variables
 .env

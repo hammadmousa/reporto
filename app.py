@@ -3,10 +3,19 @@ import streamlit as st
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 import google.generativeai as genai
+from io import BytesIO
+from PIL import Image
 import warnings
 
 # Ignore specific warnings from pydub
 warnings.filterwarnings("ignore", message="Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work", category=RuntimeWarning, module='pydub.utils')
+
+import requests
+# URL to the raw image file on GitHub
+url = "https://raw.githubusercontent.com/Motaseam-Yousef/reporto/main/reporto.png"
+
+# Fetch the image
+response = requests.get(url)
 
 def generate_content(img=None):
     """
@@ -118,8 +127,14 @@ import streamlit as st
 from PIL import Image
 import io
 def main():
-    logo_path = "C:\\Users\\Motasem-PC\\Desktop\\reporto\\Data\\reporto.png"  # Replace with the actual path to your logo
-    logo = st.image(logo_path, width=100)  # Adjust width as needed
+    if response.status_code == 200:
+        # Open the image from the binary content
+        im = Image.open(BytesIO(response.content))
+
+        # Display the image using Streamlit
+        st.image(im, width=100)
+    else:
+        st.error("Failed to retrieve image. Status code: {}".format(response.status_code))
     st.title("Reporto")
     st.markdown("##### Skip the Wait, Not the Detail: Fast AI Lab Analysis")
     st.markdown("### Overview")

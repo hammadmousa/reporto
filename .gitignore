@@ -4,5 +4,8 @@ venv/
 # Privecy
 Data/
 
+# tested result so not important
+reports/
+
 # Ignore .env file that contains environment variables
 .env

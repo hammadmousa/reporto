@@ -2,6 +2,7 @@ pandas
 numpy
 matplotlib
 Pillow
+python-dotenv
 google-generativeai
 elevenlabs
 streamlit

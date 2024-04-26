@@ -1,0 +1,8 @@
+# Ignore virtual environment folder
+venv/
+
+# Privecy
+Data/
+
+# Ignore .env file that contains environment variables
+.env

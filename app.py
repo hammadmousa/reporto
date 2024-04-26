@@ -117,7 +117,6 @@ def combine_mp3_files(directory, output_filename):
 import streamlit as st
 from PIL import Image
 import io
-
 def main():
     logo_path = "C:\\Users\\Motasem-PC\\Desktop\\reporto\\Data\\reporto.png"  # Replace with the actual path to your logo
     logo = st.image(logo_path, width=100)  # Adjust width as needed
@@ -146,29 +145,17 @@ def main():
             process_and_save_audio(processed_text, output_dir)
             combine_mp3_files(output_dir, "final_report.mp3")
             st.success("Audio report generated! Check the './audio_reports' folder for the output.")
-        else:
-            st.error("Please provide both text and an image.")
-        
-        # Assuming the audio processing functions create a final audio file called 'final_report.mp3' in the './audio_reports' folder
-        output_dir = "./audio_reports"
-        process_and_save_audio(processed_text, output_dir)
-        combine_mp3_files(output_dir, "final_report.mp3")
-        st.success("Audio report generated! Check the './audio_reports' folder for the output.")
 
-        # Display the audio player
-        audio_file_path = os.path.join(output_dir, "final_report.mp3")
-        if os.path.isfile(audio_file_path):
-            audio_file = open(audio_file_path, "rb")
-            st.audio(audio_file.read(), format="audio/mp3")
-            audio_file.close()
+            # Display the audio player
+            audio_file_path = os.path.join(output_dir, "final_report.mp3")
+            if os.path.isfile(audio_file_path):
+                audio_file = open(audio_file_path, "rb")
+                st.audio(audio_file.read(), format="audio/mp3")
+                audio_file.close()
+            else:
+                st.error("Audio file not found. Please ensure the audio generation process is correct.")
         else:
-            st.error("Audio file not found. Please ensure the audio generation process is correct.")
-    else:
-        st.error("Please upload an image to generate the report.")
-
+            st.error("Please provide an image.")
 
 if __name__ == "__main__":
-    load_dotenv()
-    gemini_api_key = os.getenv('GEMINI_API_KEY')
     main()
-

@@ -3,15 +3,25 @@ import streamlit as st
 from dotenv import load_dotenv
 from elevenlabs.client import ElevenLabs
 import google.generativeai as genai
-from pydub import AudioSegment
-from mutagen.mp3 import MP3
-from mutagen.id3 import ID3, TIT2, TPE1, TRCK, TALB
 import warnings
 
 # Ignore specific warnings from pydub
 warnings.filterwarnings("ignore", message="Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work", category=RuntimeWarning, module='pydub.utils')
 
 def generate_content(img=None):
+    """
+    Generates content based on medical examination data presented in an image.
+    
+    This function configures the GenAI API to analyze medical images and provide an interpretation.
+    It aims to provide recommendations with a positive outlook and ensures the advice of a specialist doctor
+    is mentioned for detailed information. The response is tailored to be simple and direct in Arabic.
+    
+    Parameters:
+    img (str, optional): An image file that contains medical examination data. Defaults to None.
+    
+    Returns:
+    str: The generated content based on the medical data in the image, or an error message if the process fails.
+    """
     load_dotenv()
     gemini_api_key = os.getenv('GEMINI_API_KEY')
     genai.configure(api_key=gemini_api_key)
@@ -33,6 +43,18 @@ def generate_content(img=None):
         return None
 
 def generate_audio(text, voice="Rachel", model="eleven_multilingual_v2"):
+    """
+    Generates an audio file from text using the Eleven Labs API.
+
+    Parameters:
+        text (str): The text to be converted into speech.
+        voice (str, optional): The name of the voice model to use. Defaults to "Rachel".
+        model (str, optional): The specific model of Eleven Labs to use. Defaults to "eleven_multilingual_v2".
+
+    Returns:
+        bytes: The audio data in byte format, or None if there's an error during generation.
+    """
+
     load_dotenv()
     elevenlabs_api_key = os.getenv('ELEVENLABS_API_KEY')
     elevenlabs_client = ElevenLabs(api_key=elevenlabs_api_key)
@@ -46,6 +68,17 @@ def generate_audio(text, voice="Rachel", model="eleven_multilingual_v2"):
         return None
 
 def process_and_save_audio(input_text, output_directory):
+    """
+    Processes input text into separate audio files for each paragraph and saves them in the specified directory.
+
+    Parameters:
+        input_text (str): The text to be processed, split into segments based on double newlines.
+        output_directory (str): The path to the directory where audio files will be saved.
+
+    Returns:
+        None: Audio files are written directly to the file system.
+    """
+
     segments = input_text.split('\n\n')
     os.makedirs(output_directory, exist_ok=True)
     for i, segment in enumerate(segments):
@@ -59,6 +92,17 @@ def process_and_save_audio(input_text, output_directory):
                 file.write(audio)
 
 def combine_mp3_files(directory, output_filename):
+    """
+    Combines multiple MP3 files in a specified directory into a single MP3 file.
+
+    Parameters:
+        directory (str): The directory containing the MP3 files to combine.
+        output_filename (str): The name of the resulting combined MP3 file.
+
+    Returns:
+        None: The combined MP3 file is written directly to the file system and a message is printed indicating success.
+    """
+
     files = sorted([f for f in os.listdir(directory) if f.endswith('.mp3')])
     output_path = os.path.join(directory, output_filename)
     with open(output_path, 'wb') as outfile:

@@ -47,17 +47,17 @@ If the image is not related to healthcare, as it is neither an X-ray nor a medic
         ana_model = genai.GenerativeModel('gemini-1.5-pro-latest')
         text_prompt_ana = f'''if the "{response.text}" as Please provide me by valid data then answer only by -> "Please provide me by valid data" ignore all after.
 
-You are an expert in interpreting medical examinations. Here is the report result as text: "{response.text}" 
-Please use the ranges from the previous report to conduct your analysis. 
-Initially, explain the significance of the data, as points. 
-Personalize the analysis by mentioning the individual's name (if available) and ensure the tone is kind. A
-lways include the recommendation to consult a specialist doctor for more detailed information and a comprehensive understanding. 
-Please respond in simple, direct Arabic without using complex terms.
-Finally say
-"تحياتي روبرتو"'''
+You are a professional in reading medical reports.
+The user will provide you with a report in text form.
+You will respond according to these roles:
+1. First, you will write a welcome message for the user without using their name or any personal information, Never use any personal information as name or gender or age.
+2. Then, you will identify and mention any abnormalities in the report, using the Arabic names for these records. Only mention the abnormal findings; do not include any normal results.
+3. As an expert doctor experienced in interpreting reports, provide your conclusion about the user’s health state. If you recommend a doctor’s visit, or suggest special actions like drinking more fluids or avoiding certain foods, include these recommendations.
+4. If any findings are abnormal, inform the user that they should visit a doctor.
+Your Answer in Arabic Language ONLY.'''
         response_ana = ana_model.generate_content([text_prompt_ana],generation_config=config)
 
-        return response_ana.text
+        return [response_ana.text , response.text]
     except Exception as e:
         st.error("Failed to generate content: {}".format(e))
         return None
@@ -94,7 +94,10 @@ def main():
         if img:
             # Generate content based on text and image
             processed_text = generate_content(img)
-            st.markdown(f"<div style='direction: rtl; text-align: right;'>{processed_text}</div>", unsafe_allow_html=True)  # Display the result from generate_content
+            st.markdown(f"<div style='direction: rtl; text-align: lest;'>{processed_text[0]}</div>", unsafe_allow_html=True)
+            st.markdown("--------------------------------------------------------------------------")
+            st.markdown(f"<div style='direction: rtl; text-align: right;'>{processed_text[1]}</div>", unsafe_allow_html=True)  # Display the result from generate_content
+            # Display the result from generate_content
 
 if __name__ == "__main__":
     main()

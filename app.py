@@ -39,7 +39,7 @@ def generate_content(img=None):
     try:
         genai_client = genai.GenerativeModel('gemini-1.0-pro-vision-latest')
         text_prompt = '''Please provide me with all the details in the image if its related to healthcare field, focusing on the gender, age, all test names, results, and the ranges for these results.
-if the image not related to healthcare as its not an Xray or medical report then replay ONLY by -> "please provide me by valid data"'''
+If the image is not related to healthcare, as it is neither an X-ray nor a medical report, then reply only with: "Please provide valid data."'''
         response = model.generate_content([text_prompt, img],generation_config=config)
 
         # analysis model

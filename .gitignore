@@ -10,3 +10,6 @@ audio_reports/
 
 # Ignore .env file that contains environment variables
 .env
+
+# test other  model privicy
+notebook Xray.ipynb

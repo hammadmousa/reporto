@@ -38,21 +38,23 @@ def generate_content(img=None):
     model = genai.GenerativeModel('gemini-1.0-pro-vision-latest')
     try:
         genai_client = genai.GenerativeModel('gemini-1.0-pro-vision-latest')
-        text_prompt = '''You are an expert in interpreting medical examinations. Here is the report result as text: '''
+        text_prompt = '''Please provide me with all the details in the image if its related to healthcare field, focusing on the gender, age, all test names, results, and the ranges for these results.
+if the image not related to healthcare as its not an Xray or medical report then replay ONLY by -> "please provide me by valid data"'''
         response = model.generate_content([text_prompt, img],generation_config=config)
 
         # analysis model
 
         ana_model = genai.GenerativeModel('gemini-1.5-pro-latest')
-        text_prompt_ana = f''' 
-        You are an expert in interpreting medical examinations. Here is the report result as text: "{response.text}" 
-        Please use the ranges from the previous report to conduct your analysis. 
-        Initially, explain the significance of the data, as points. 
-        Personalize the analysis by mentioning the individual's name (if available) and ensure the tone is kind. A
-        lways include the recommendation to consult a specialist doctor for more detailed information and a comprehensive understanding. 
-        Please respond in simple, direct Arabic without using complex terms.
-        Finally say
-        "تحياتي روبرتو"'''
+        text_prompt_ana = f'''if the "{response.text}" as Please provide me by valid data then answer only by -> "Please provide me by valid data" ignore all after.
+
+You are an expert in interpreting medical examinations. Here is the report result as text: "{response.text}" 
+Please use the ranges from the previous report to conduct your analysis. 
+Initially, explain the significance of the data, as points. 
+Personalize the analysis by mentioning the individual's name (if available) and ensure the tone is kind. A
+lways include the recommendation to consult a specialist doctor for more detailed information and a comprehensive understanding. 
+Please respond in simple, direct Arabic without using complex terms.
+Finally say
+"تحياتي روبرتو"'''
         response_ana = ana_model.generate_content([text_prompt_ana],generation_config=config)
 
         return response_ana.text

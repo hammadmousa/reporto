@@ -7,3 +7,4 @@ google-generativeai
 elevenlabs
 streamlit
 mutagen
+azure-cognitiveservices-vision-computervision

@@ -1,103 +1,104 @@
 import os
+import io
 import streamlit as st
 from dotenv import load_dotenv
-from elevenlabs.client import ElevenLabs
+# Assuming ElevenLabs is a valid library that you have access to.
+# from elevenlabs.client import ElevenLabs
 import google.generativeai as genai
-from io import BytesIO
 from PIL import Image
+from azure.cognitiveservices.vision.computervision import ComputerVisionClient
+from azure.cognitiveservices.vision.computervision.models import OperationStatusCodes
+from msrest.authentication import CognitiveServicesCredentials
 import warnings
+import requests
+from io import BytesIO
+import time
 
 # Ignore specific warnings from pydub
 warnings.filterwarnings("ignore", message="Couldn't find ffmpeg or avconv - defaulting to ffmpeg, but may not work", category=RuntimeWarning, module='pydub.utils')
 
-import requests
-# URL to the raw image file on GitHub
-url = "https://raw.githubusercontent.com/Motaseam-Yousef/reporto/main/reporto.png"
-
-# Fetch the image
-response = requests.get(url)
-
-def generate_content(img=None):
-    """
-    Generates content based on medical examination data presented in an image.
-    
-    This function configures the GenAI API to analyze medical images and provide an interpretation.
-    It aims to provide recommendations with a positive outlook and ensures the advice of a specialist doctor
-    is mentioned for detailed information. The response is tailored to be simple and direct in Arabic.
-    
-    Parameters:
-    img (str, optional): An image file that contains medical examination data. Defaults to None.
-    
-    Returns:
-    str: The generated content based on the medical data in the image, or an error message if the process fails.
-    """
-    load_dotenv()
-    gemini_api_key = os.getenv('GEMINI_API_KEY')
-    genai.configure(api_key=gemini_api_key)
-    config = genai.types.GenerationConfig(temperature=0)
-    model = genai.GenerativeModel('gemini-1.0-pro-vision-latest')
-    try:
-        genai_client = genai.GenerativeModel('gemini-1.0-pro-vision-latest')
-        text_prompt = '''Please provide me with all the details in the image if its related to healthcare field, focusing on the gender, age, all test names, results, and the ranges for these results.
-If the image is not related to healthcare, as it is neither an X-ray nor a medical report, then reply only with: "Please provide valid data."'''
-        response = model.generate_content([text_prompt, img],generation_config=config)
-
-        # analysis model
-
-        ana_model = genai.GenerativeModel('gemini-1.5-pro-latest')
-        text_prompt_ana = f'''if the "{response.text}" as Please provide me by valid data then answer only by -> "Please provide me by valid data" ignore all after.
-
-You are a professional in reading medical reports.
-The user will provide you with a report in text form.
-You will respond according to these roles:
-1. First, you will write a welcome message for the user without using their name or any personal information, Never use any personal information as name or gender or age.
-2. Then, you will identify and mention any abnormalities in the report, using the Arabic names for these records. Only mention the abnormal findings; do not include any normal results.
-3. As an expert doctor experienced in interpreting reports, provide your conclusion about the user’s health state. If you recommend a doctor’s visit, or suggest special actions like drinking more fluids or avoiding certain foods, include these recommendations.
-4. If any findings are abnormal, inform the user that they should visit a doctor.
-Your Answer in Arabic Language ONLY.'''
-        response_ana = ana_model.generate_content([text_prompt_ana],generation_config=config)
-
-        return [response_ana.text , response.text]
-    except Exception as e:
-        st.error("Failed to generate content: {}".format(e))
-        return None
-
-# Streamlit app setup
-
-import streamlit as st
-from PIL import Image
-import io
 def main():
-    if response.status_code == 200:
-        # Open the image from the binary content
-        im = Image.open(BytesIO(response.content))
+    # Load environment variables
+    load_dotenv()
 
-        # Display the image using Streamlit
-        st.image(im, width=100)
-    else:
-        st.error("Failed to retrieve image. Status code: {}".format(response.status_code))
+    # Streamlit app setup
     st.title("Reporto")
     st.markdown("##### Skip the Wait, Not the Detail: Fast AI Lab Analysis")
-    st.markdown("### Overview")
     st.markdown("""
     In many regions, the manual analysis of lab reports is slow, error-prone, and often hindered by the scarcity of healthcare providers. 
     This project addresses these challenges by introducing an AI-powered application designed to automate and enhance the analysis and interpretation of lab reports, reducing wait times and the anxiety associated with them.
     """)
 
-    img_file_buffer = st.file_uploader("Upload an image (jpg, png):", type=["jpg", "png"])
-    img = None
-    if img_file_buffer is not None:
-        # Convert the file buffer to an image object
-        img = Image.open(io.BytesIO(img_file_buffer.getvalue()))
+    # Azure credentials
+    azure_key = os.getenv('AZURE_VISION_KEY')
+    azure_endpoint = os.getenv('AZURE_ENDPOINT')
+    credentials = CognitiveServicesCredentials(azure_key)
+    client = ComputerVisionClient(azure_endpoint, credentials)
+
+    def extract_text_from_stream(image_stream, client):
+        response = client.read_in_stream(image_stream, raw=True)
+        operation_location = response.headers["Operation-Location"]
+        operation_id = operation_location.split("/")[-1]
+
+        while True:
+            result = client.get_read_result(operation_id)
+            if result.status not in ['notStarted', 'running']:
+                break
+            time.sleep(1)
+
+        extracted_text = ""
+        if result.status == OperationStatusCodes.succeeded:
+            for text_result in result.analyze_result.read_results:
+                for line in text_result.lines:
+                    extracted_text += line.text + "\n"
+
+        return extracted_text.strip()
+
+    def generate_content(image_stream):
+        # Configure GenAI API with your API key
+        gemini_api_key = os.getenv('GEMINI_API_KEY')
+        genai.configure(api_key=gemini_api_key)
+
+        try:
+            extracted_text = extract_text_from_stream(image_stream, client)
+
+            # Check if any text was extracted
+            if not extracted_text:
+                return "No text could be extracted from the image."
+
+            # analysis model
+            ana_model = genai.GenerativeModel('gemini-1.5-pro-latest')
+            config = genai.types.GenerationConfig(temperature=0)
+            text_prompt_ana = f'''The report says: "{extracted_text}". 
+            and You are a professional in reading medical reports.
+            The user will provide you with a report in text form.
+            You will respond according to these roles:
+            1. First, you will write a welcome message for the user without using their name or any personal information, Never use any personal information as name or gender or age.
+            2. Then, you will identify and mention any abnormalities in the report, using the Arabic names for these records. Only mention the abnormal findings; do not include any normal results.
+            3. As an expert doctor experienced in interpreting reports, provide your conclusion about the user’s health state. If you recommend a doctor’s visit, or suggest special actions like drinking more fluids or avoiding certain foods, include these recommendations.
+            4. If any findings are abnormal, inform the user that they should visit a doctor.
+            Your Answer in Arabic Language ONLY.'''
+
+            response_ana = ana_model.generate_content([text_prompt_ana], generation_config=config)
+            return [response_ana.text, extracted_text]
+        except Exception as e:
+            st.error(f"Failed to generate content: {e}")
+            return None
+
+    img_file_buffer = st.file_uploader("Upload an image (jpg, png, jpeg):", type=["jpg", "png", "jpeg"])
 
     if st.button("Generate Report"):
-        if img:
+        if img_file_buffer:
+            # Convert the file buffer to an image object
+            image_stream = BytesIO(img_file_buffer.getvalue())
+
             # Generate content based on text and image
-            processed_text = generate_content(img)
-            st.markdown(f"<div style='direction: rtl; text-align: lest;'>{processed_text[0]}</div>", unsafe_allow_html=True)
-            st.markdown("--------------------------------------------------------------------------")
-            st.markdown(f"<div style='direction: rtl; text-align: right;'>{processed_text[1]}</div>", unsafe_allow_html=True)  # Display the result from generate_content
-            # Display the result from generate_content
+            processed_text = generate_content(image_stream)
+
+            if processed_text:
+                # Display the result from generate_content
+                st.markdown(f"<div style='direction: rtl; text-align: right;'>{processed_text[0]}</div>", unsafe_allow_html=True)
+                st.markdown(f"Extracted text: {processed_text[1]}")
 
 if __name__ == "__main__":
     main()

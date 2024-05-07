@@ -44,7 +44,7 @@ def main():
             result = client.get_read_result(operation_id)
             if result.status not in ['notStarted', 'running']:
                 break
-            time.sleep(1)
+            time.sleep(1) 
 
         extracted_text = ""
         if result.status == OperationStatusCodes.succeeded:
